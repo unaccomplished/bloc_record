@@ -2,6 +2,11 @@ require 'sqlite3'
 
 module Selection
   def find(*ids)
+    ids.each do |id|
+      unless id.is_a?(Integer) && id >= 1
+        raise ArgumentError.new("IDs must be an integer and greater than or equal to 1")
+      end
+    end
 
     if ids.length == 1
       find_one(ids.first)
@@ -16,6 +21,10 @@ module Selection
   end
 
   def find_one(id)
+    unless id.is_a?(Integer) && id >= 1
+      raise ArgumentError.new("ID must be an integer and greater than or equal to 1")
+    end
+
     row = connection.get_first_row <<-SQL
       SELECT #{columns.join ","} FROM #{table}
       WHERE id = #{id};
@@ -25,6 +34,10 @@ module Selection
   end
 
   def find_by(attribute, value)
+    unless attribute.is_a?(String) && value.is_a?(String)
+      raise ArgumentError.new("Attribute and/or value must be a string")
+    end
+
     rows = connection.execute <<-SQL
       SELECT #{columns.join ","} FROM #{table}
       WHERE #{attribute} = #{BlocRecord::Utility.sql_strings(value)};
@@ -34,6 +47,10 @@ module Selection
   end
 
   def take(num=1)
+    unless id.is_a?(Integer) && id >= 1
+      raise ArgumentError.new("Number must be an integer and greater than or equal to 1")
+    end
+
     if num > 1
       rows = connection.execute <<-SQL
         SELECT #{columns.join ","} FROM #{table}
@@ -83,6 +100,9 @@ module Selection
     rows_to_array(rows)
   end
 
+  def find_each()
+  end
+
   private
   def init_object_from_row(row)
     if row
@@ -93,5 +113,12 @@ module Selection
 
   def rows_to_array(rows)
     rows.map { |row| new(Hash[columns.zip(row)]) }
+  end
+
+  def method_missing(m, *args, &block)
+    if m[0..7] == "find_by_"
+      attribute = m[8..-1].to_sym
+      find_by(attribute, args[0])
+    end
   end
 end
