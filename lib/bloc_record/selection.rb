@@ -100,7 +100,24 @@ module Selection
     rows_to_array(rows)
   end
 
-  def find_each()
+  def find_each(options = {})
+    rows = connection.execute <<-SQL
+      SELECT #{columns.join ","} FROM #{table}
+      LIMIT #{options[:batch_size]} OFFSET #{options[:start]};
+    SQL
+
+    for row in rows_to_array(rows)
+      yield row
+    end
+  end
+
+  def find_in_batches(options = {})
+    rows = connection.execute <<-SQL
+      SELECT #{columns.join ","} FROM #{table}
+      LIMIT #{options[:batch_size]} OFFSET #{options[:start]};
+    SQL
+
+    yield rows_to_array(rows)
   end
 
   private
