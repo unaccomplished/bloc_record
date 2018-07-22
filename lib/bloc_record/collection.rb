@@ -4,5 +4,17 @@ module BlocRecord
       ids = self.map(&:id)
       self.any? ? self.first.class.update(ids, updates) : false
     end
+
+    def take(num=1)
+      self.any? ? self[0..num-1] : false
+    end
+
+    def where(*args)
+      self.any? ? self.first.class.where(args) : false
+    end
+
+    def not(*args)
+      self.any? ? self.first.class.not(args) : false
+    end
   end
 end

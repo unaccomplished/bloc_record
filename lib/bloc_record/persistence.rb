@@ -47,16 +47,20 @@ module Persistence
         VALUES (#{vals.join ","});
       SQL
 
-# come back to figure out attributes.zip and attrs.value
+      # come back to figure out attributes.zip and attrs.value
       data = Hash[attributes.zip attrs.values]
       data["id"] = connection.execute("SELECT last_insert_rowid();")[0][0]
       new(data)
     end
 
     def update(ids, updates)
-      updates = BlocRecord::Utility.convert_keys(updates)
-      updates.delete "id"
-      updates_array = updates.map { |key, value| "#{key}=#{BlocRecord::Utility.sql_strings(value)}" }
+      if updates.class == Array
+        updates.each_with_index { |hash, index| update(ids[index], hash) }
+      else
+        updates = BlocRecord::Utility.convert_keys(updates)
+        updates.delete "id"
+        updates_array = updates.map { |key, value| "#{key}=#{BlocRecord::Utility.sql_strings(value)}" }
+      end
 
       if ids.class == Fixnum
         where_clause = "WHERE id = #{ids};"
@@ -64,7 +68,7 @@ module Persistence
         where_clause = ids.empty? ? ";" : "WHERE id IN (#{ids.join(",")});"
       else
         where_clause = ";"
-      end 
+      end
 
       connection.execute <<-SQL
         UPDATE #{table}
@@ -76,6 +80,14 @@ module Persistence
 
     def update_all(updates)
       update(nil, updates)
+    end
+  end
+
+  private
+  def method_missing(m, *args, &block)
+    if m[0..6] == "update_"
+      attribute = m[7..-1].to_sym
+      update_attribute(attribute, args[0])
     end
   end
 end
